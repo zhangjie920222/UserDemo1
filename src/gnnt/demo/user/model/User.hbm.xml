@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="GBK"?>
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+"http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+<hibernate-mapping>
+    <!--name 实体类的 包名+ 类名        table数据库的表名    -->  
+ <class name="gnnt.demo.user.model.User" table="zhangj_user">
+     <!-- name对应实体类的属性id -->
+     <id  name="userId">
+       <column name="userid"></column>
+       <!--主键的生成策略 native可以适应多种数据库  increment mysql自动增长策略  sequence oracle自动增长策略 -->
+      <generator class="native"></generator>
+     </id>
+    <property name="userName">
+      <column name="username"></column>
+    </property>
+   
+    <property name="gender">
+       <column name="gender"></column>
+    </property>
+    <property name="interest">
+       <column name="interest"></column>
+    </property>
+    <property name="intime">
+       <column name="intime"></column>
+    </property>
+    <many-to-one name="depart" class="gnnt.demo.user.model.Depart" lazy="false">
+            <column name="departno" />
+    </many-to-one>
+ </class>
+</hibernate-mapping>

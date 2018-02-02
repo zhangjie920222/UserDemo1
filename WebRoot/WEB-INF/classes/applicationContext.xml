@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans
+	xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:aop="http://www.springframework.org/schema/aop"
+	xmlns:context="http://www.springframework.org/schema/context" 
+	xmlns:tx="http://www.springframework.org/schema/tx"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans
+	                    http://www.springframework.org/schema/beans/spring-beans-3.1.xsd
+	                    http://www.springframework.org/schema/context
+                        http://www.springframework.org/schema/context/spring-context.xsd
+	                    http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-3.1.xsd  
+                        http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-3.1.xsd  
+                        http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-3.1.xsd"
+                        default-autowire="byName" default-lazy-init="true">
+ 
+    <!-- 使用 annotation -->  
+    <context:annotation-config /> 
+    <!-- 自动扫描Spring注解配置  并保证@Required,@Autowired的属性被注入-->
+	<context:component-scan base-package="gnnt.demo" />
+   
+    <!-- 导入外部的properties文件 -->
+    <context:property-placeholder location="classpath:db.properties"/> 
+    <!-- 定义数据源1的信息 -->
+	<bean id="dataSource" class="com.mchange.v2.c3p0.ComboPooledDataSource"
+		destroy-method="close">			
+		<property name="driverClass">
+			<value>${jdbc.driverClass}</value> 
+		</property>
+		<property name="jdbcUrl">
+		<value>${jdbc.jdbcUrl}</value> 
+		</property>
+		<property name="user">
+			<value>${jdbc.username}</value> 
+		</property>
+		<property name="password">
+			 <value>${jdbc.password}</value>
+		</property>
+		<property name="maxPoolSize">
+			<value>${pool.maxPoolSize}</value>
+		</property>
+		<property name="minPoolSize">
+			<value>${pool.minPoolSize}</value>
+		</property>
+		<property name="initialPoolSize">
+			<value>${pool.initialPoolSize}</value>
+		</property>
+		<property name="maxIdleTime">
+			<value>${pool.maxIdleTime}</value>
+		</property>
+	</bean>
+	<!-- 定义数据源2的信息 -->
+	<bean id="mydataSource" class="com.mchange.v2.c3p0.ComboPooledDataSource"
+		destroy-method="close">			
+		<property name="driverClass">
+			<value>oracle.jdbc.OracleDriver</value> 
+		</property>
+		<property name="jdbcUrl">
+		<value>${jdbc.jdbcUrl}</value> 
+		</property>
+		<property name="user">
+			<value>${jdbc.username}</value> 
+		</property>
+		<property name="password">
+			 <value>${jdbc.password}</value>
+		</property>
+		
+	</bean>
+
+	<!--定义Hibernate的SessionFactory -->
+	<!-- SessionFactory使用的数据源为上面的数据源1 "-->
+	<bean id="sessionFactory" class="org.springframework.orm.hibernate3.LocalSessionFactoryBean">
+		<property name="dataSource">
+			<ref local="dataSource" />
+		</property>
+		<!-- 指定 Hibernate的映射文件 -->
+		<property name="mappingResources">
+			<list>
+				<value>gnnt/demo/user/model/Depart.hbm.xml</value>
+				<value>gnnt/demo/user/model/User.hbm.xml</value>
+			</list>
+		</property>
+		<!-- 指定 Hibernate的配置信息 -->
+		<property name="hibernateProperties">
+			<props>
+				<prop key="hibernate.dialect">${hibernate.dialect}</prop>
+				<prop key="hibernate.show_sql">${hibernate.show_sql}</prop>
+				<prop key="hibernate.format_sql">${hibernate.format_sql}</prop>
+				<prop key="hibernate.hbm2ddl.auto">${hibernate.hbm2ddl.auto}</prop>	
+				<prop key="hibernate.cache.use_structured_entries">true</prop>
+	        	<!--最优化二级缓存-->
+		        <prop key="hibernate.cache.use_second_level_cache">true</prop>
+		        <!--完全禁用二级缓存开关，对那些在类的映射定义中指定cache的类，默认开启二级缓存-->
+		        <prop key="hibernate.cache.provider_class">org.hibernate.cache.EhCacheProvider</prop>
+		<prop key="hibernate.cache.use_query_cache">true</prop>
+		<prop key="hibernate.cache.provider_configuration_file_resource_path">ehcache.xml</prop>			
+		</props>
+		</property>		
+	</bean>
+	
+	<!-- 使用jdbcTemplate配置数据源2 -->
+    <bean class="org.springframework.jdbc.core.JdbcTemplate">
+        <!-- 告诉它用哪个数据源 -->
+        <property name="dataSource"><ref bean="dataSource"/></property>
+    </bean>
+    
+    <!-- 配置事务管理器 -->
+    <!-- 在此配置JdbcTemplate和session共享事务 -->
+	<bean id="transactionManager"
+		class="org.springframework.orm.hibernate3.HibernateTransactionManager">
+		<!-- 不能同时配两个？（需要同时使用一个数据源） -->
+		<property name="sessionFactory" ref="sessionFactory" />
+		<property name="dataSource"><ref bean="dataSource"/></property>
+	</bean>
+
+	<!-- 配置声明式事务：方法一，在Service实现类或者public实现方法上使用注解@Transactional，则此类或方法就会启用事务机制 -->
+	<tx:annotation-driven transaction-manager="transactionManager" />
+	
+    <!-- 事务相关控制 -->
+    <!-- <bean id="mytransactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+              <property name="sessionFactory" ref="sessionFactory" />
+              <property name="dataSource"><ref bean="mydataSource"/></property>
+    </bean>
+
+    事务增强，这里用的是spring提供的特性
+    <tx:advice id="tx" transaction-manager="mytransactionManager">
+        <tx:attributes>
+            <tx:method name="select*" read-only="true"/>
+            <tx:method name="find*" read-only="true"/>
+            <tx:method name="get*" read-only="true"/>
+            <tx:method name="has*" read-only="true"/>
+            <tx:method name="count*" read-only="true"/>
+            <tx:method name="search*" read-only="true"/>
+        </tx:attributes>
+    </tx:advice>
+    <aop:config>
+        <aop:pointcut id="pc" expression="execution(* gnnt.demo.user.service..*iml.*(..))" />
+        把事务控制在Service层
+        <aop:advisor pointcut-ref="pc" advice-ref="tx" />
+    </aop:config> -->
+	
+	</beans>
